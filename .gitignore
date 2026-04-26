@@ -1,0 +1,18 @@
+# Terraform local state and cache — never commit these
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.tfstate.*.backup
+tfplan
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Secrets
+*.pem
+*.key
+secrets.auto.tfvars
