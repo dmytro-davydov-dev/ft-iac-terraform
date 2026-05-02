@@ -13,9 +13,9 @@ locals {
 
   # Common labels applied to every resource.
   common_labels = {
-    project   = "flowterra"
-    env       = terraform.workspace
-    managed   = "terraform"
+    project = "flowterra"
+    env     = terraform.workspace
+    managed = "terraform"
   }
 
   # Extra Firebase Auth authorized domains per workspace.
@@ -25,6 +25,14 @@ locals {
     demo = []
     prod = []
   }
+
+  # BigQuery dataset ID follows naming convention: flowterra_{env}
+  bq_dataset_id = "flowterra_${terraform.workspace}"
+
+  # Compute the ingest-fn SA email deterministically to avoid a module cycle.
+  # (module.bigquery needs it, module.cloud_function creates it — referencing
+  # the output would create a cycle.)
+  ingest_fn_sa_email = "flowterra-ingest-fn@${local.project_id}.iam.gserviceaccount.com"
 }
 
 # ---------------------------------------------------------------------------
@@ -43,12 +51,13 @@ provider "google-beta" {
 # ---------------------------------------------------------------------------
 # Child modules
 # ---------------------------------------------------------------------------
+
 module "firestore" {
   source = "./modules/firestore"
 
-  project_id         = local.project_id
-  location           = var.firestore_location
-  labels             = local.common_labels
+  project_id = local.project_id
+  location   = var.firestore_location
+  labels     = local.common_labels
 }
 
 module "pubsub" {
@@ -70,4 +79,44 @@ module "secrets" {
 
   project_id = local.project_id
   labels     = local.common_labels
+}
+
+# ---------------------------------------------------------------------------
+# Phase 4: IoT data pipeline
+# ---------------------------------------------------------------------------
+
+# BigQuery dataset + tables (deploy before ingest-fn so tables exist)
+module "bigquery" {
+  source = "./modules/bigquery"
+
+  project_id         = local.project_id
+  env                = terraform.workspace
+  dataset_id         = local.bq_dataset_id
+  bq_location        = var.bq_location
+  ingest_fn_sa_email = module.cloud_function.service_account_email
+  labels             = local.common_labels
+}
+
+# EMQX MQTT broker — Managed Instance Group, size=1
+module "emqx_vm" {
+  source = "./modules/emqx_vm"
+
+  project_id   = local.project_id
+  region       = var.region
+  pubsub_topic = "flowterra-iot-ingress"
+  labels       = local.common_labels
+}
+
+# ingest-fn Cloud Function — consumes flowterra-iot-ingress → BQ + Firestore
+module "cloud_function" {
+  source = "./modules/cloud_function"
+
+  project_id      = local.project_id
+  region          = var.region
+  source_dir      = "${path.root}/../ft-ingest-fn"
+  pubsub_topic_id = module.pubsub.topic_ids["iot_ingress"]
+  bq_dataset      = local.bq_dataset_id
+  labels          = local.common_labels
+
+  depends_on = [module.bigquery]
 }

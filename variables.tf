@@ -20,3 +20,9 @@ variable "firestore_location" {
   type        = string
   default     = "nam5"
 }
+
+variable "bq_location" {
+  description = "BigQuery dataset location. EU aligns with europe-west1 Cloud Run region."
+  type        = string
+  default     = "EU"
+}

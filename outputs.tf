@@ -23,3 +23,29 @@ output "secret_ids" {
   value       = module.secrets.secret_ids
   sensitive   = true
 }
+
+# Phase 4 outputs
+output "bq_dataset_id" {
+  description = "BigQuery dataset ID for this workspace."
+  value       = module.bigquery.dataset_id
+}
+
+output "bq_location_events_table" {
+  description = "Full BigQuery table ID for location_events."
+  value       = module.bigquery.location_events_table_id
+}
+
+output "bq_geofence_events_table" {
+  description = "Full BigQuery table ID for geofence_events."
+  value       = module.bigquery.geofence_events_table_id
+}
+
+output "ingest_fn_name" {
+  description = "Deployed Cloud Function name."
+  value       = module.cloud_function.function_name
+}
+
+output "emqx_mig_id" {
+  description = "EMQX Managed Instance Group resource ID."
+  value       = module.emqx_vm.mig_id
+}
