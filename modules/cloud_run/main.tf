@@ -19,7 +19,8 @@ resource "google_cloud_run_v2_service" "ft_api" {
   deletion_protection = false
 
   template {
-    labels = var.labels
+    labels          = var.labels
+    service_account = var.service_account_email
 
     scaling {
       min_instance_count = 0

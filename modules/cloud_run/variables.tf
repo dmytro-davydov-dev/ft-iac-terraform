@@ -32,3 +32,8 @@ variable "allow_unauthenticated" {
   type        = bool
   default     = false
 }
+
+variable "service_account_email" {
+  description = "Service account email to run the Cloud Run service as. Must have BigQuery READER on the analytics dataset."
+  type        = string
+}

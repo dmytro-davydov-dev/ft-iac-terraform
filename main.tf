@@ -29,10 +29,11 @@ locals {
   # BigQuery dataset ID follows naming convention: flowterra_{env}
   bq_dataset_id = "flowterra_${terraform.workspace}"
 
-  # Compute the ingest-fn SA email deterministically to avoid a module cycle.
-  # (module.bigquery needs it, module.cloud_function creates it — referencing
-  # the output would create a cycle.)
+  # Compute service account emails deterministically to avoid module cycles.
+  # Both SAs are created as google_service_account resources below; using
+  # interpolated emails here avoids circular dependencies with module.bigquery.
   ingest_fn_sa_email = "flowterra-ingest-fn@${local.project_id}.iam.gserviceaccount.com"
+  ft_api_sa_email    = "flowterra-ft-api@${local.project_id}.iam.gserviceaccount.com"
 }
 
 # ---------------------------------------------------------------------------
@@ -85,6 +86,15 @@ module "secrets" {
 # Phase 4: IoT data pipeline
 # ---------------------------------------------------------------------------
 
+# Dedicated service account for ft-api (Cloud Run workload identity).
+# Granted BigQuery READER on the analytics dataset (see module.bigquery).
+resource "google_service_account" "ft_api" {
+  project      = local.project_id
+  account_id   = "flowterra-ft-api"
+  display_name = "Flowterra ft-api"
+  description  = "Workload identity for the ft-api Cloud Run service."
+}
+
 # BigQuery dataset + tables (deploy before ingest-fn so tables exist)
 module "bigquery" {
   source = "./modules/bigquery"
@@ -94,7 +104,23 @@ module "bigquery" {
   dataset_id         = local.bq_dataset_id
   bq_location        = var.bq_location
   ingest_fn_sa_email = local.ingest_fn_sa_email
+  ft_api_sa_email    = local.ft_api_sa_email
   labels             = local.common_labels
+
+  depends_on = [google_service_account.ft_api]
+}
+
+# ft-api Cloud Run service
+module "cloud_run" {
+  source = "./modules/cloud_run"
+
+  project_id            = local.project_id
+  region                = var.region
+  service_account_email = local.ft_api_sa_email
+  labels                = local.common_labels
+  allow_unauthenticated = terraform.workspace == "dev"
+
+  depends_on = [google_service_account.ft_api]
 }
 
 # EMQX MQTT broker — Managed Instance Group, size=1
