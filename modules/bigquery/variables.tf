@@ -16,7 +16,7 @@ variable "dataset_id" {
 variable "bq_location" {
   description = "BigQuery dataset location. Use a multi-region (EU, US) or the same region as Cloud Run."
   type        = string
-  default     = "EU"
+  default     = "US"
 }
 
 variable "ingest_fn_sa_email" {

@@ -188,9 +188,6 @@ resource "google_compute_region_instance_group_manager" "emqx" {
     initial_delay_sec = 180 # allow time for EMQX + bridge to start
   }
 
-  update_policy {
-    type                  = "PROACTIVE"
-    minimal_action        = "REPLACE"
-    max_unavailable_fixed = 1
-  }
+  # update_policy omitted — GCP default (OPPORTUNISTIC) is fine for a
+  # size=1 MVP MIG. Re-add with zone-aware surge counts before production.
 }

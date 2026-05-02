@@ -54,6 +54,13 @@ resource "google_service_account" "ingest_fn" {
   display_name = "Flowterra ingest-fn Cloud Function"
 }
 
+# IAM changes can take ~60 s to propagate globally after SA creation.
+# The Cloud Function build will fail if the SA isn't visible to IAM yet.
+resource "time_sleep" "ingest_fn_sa_propagation" {
+  create_duration = "60s"
+  depends_on      = [google_service_account.ingest_fn]
+}
+
 resource "google_project_iam_member" "ingest_fn_firestore" {
   project = var.project_id
   role    = "roles/datastore.user"
@@ -183,6 +190,7 @@ resource "google_cloudfunctions2_function" "ingest_fn" {
     google_project_service.cloudbuild,
     google_project_service.run,
     google_project_service.eventarc,
+    time_sleep.ingest_fn_sa_propagation,
     google_project_iam_member.ingest_fn_firestore,
     google_project_iam_member.ingest_fn_bigquery,
     google_project_iam_member.ingest_fn_pubsub_subscriber,

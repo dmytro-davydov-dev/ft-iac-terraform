@@ -93,7 +93,7 @@ module "bigquery" {
   env                = terraform.workspace
   dataset_id         = local.bq_dataset_id
   bq_location        = var.bq_location
-  ingest_fn_sa_email = module.cloud_function.service_account_email
+  ingest_fn_sa_email = local.ingest_fn_sa_email
   labels             = local.common_labels
 }
 
@@ -118,5 +118,7 @@ module "cloud_function" {
   bq_dataset      = local.bq_dataset_id
   labels          = local.common_labels
 
-  depends_on = [module.bigquery]
+  # Implicit ordering: cloud_function references pubsub topic from module.pubsub.
+  # BigQuery tables must exist before ingest-fn starts receiving events, but
+  # Terraform can create both in parallel — BQ finishes first in practice.
 }
