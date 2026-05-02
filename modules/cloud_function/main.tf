@@ -91,11 +91,32 @@ resource "google_project_iam_member" "ingest_fn_log_writer" {
   member  = "serviceAccount:${google_service_account.ingest_fn.email}"
 }
 
-# Allow Pub/Sub to invoke the function (required for Pub/Sub → GCF2 trigger)
+# Allow Pub/Sub service agent to create tokens for the ingest-fn SA
 resource "google_project_iam_member" "ingest_fn_token_creator" {
   project = var.project_id
   role    = "roles/iam.serviceAccountTokenCreator"
   member  = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
+}
+
+# Allow Pub/Sub service agent to invoke the Cloud Run service backing ingest-fn
+resource "google_cloud_run_v2_service_iam_member" "pubsub_run_invoker" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloudfunctions2_function.ingest_fn.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
+}
+
+# Allow Eventarc service agent to invoke the Cloud Run service backing ingest-fn.
+# GCF2 Pub/Sub triggers route through Eventarc; the Eventarc SA must have
+# run.invoker on the underlying Cloud Run service or deliveries fail with
+# "unauthorized-client" in Cloud Function logs.
+resource "google_cloud_run_v2_service_iam_member" "eventarc_run_invoker" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloudfunctions2_function.ingest_fn.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-eventarc.iam.gserviceaccount.com"
 }
 
 data "google_project" "project" {

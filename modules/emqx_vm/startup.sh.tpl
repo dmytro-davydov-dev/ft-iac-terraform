@@ -158,7 +158,7 @@ PROJECT_ID   = "$PROJECT_ID"
 PUBSUB_TOPIC = "$PUBSUB_TOPIC"
 MQTT_HOST    = "127.0.0.1"
 MQTT_PORT    = 1883
-SUBSCRIBE    = "iot/ingress/#"
+SUBSCRIBE    = "iot-ingress/#"
 
 publisher  = pubsub_v1.PublisherClient()
 topic_path = publisher.topic_path(PROJECT_ID, PUBSUB_TOPIC)
