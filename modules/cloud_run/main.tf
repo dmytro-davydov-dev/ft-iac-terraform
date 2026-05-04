@@ -16,8 +16,6 @@ resource "google_cloud_run_v2_service" "ft_api" {
   location = var.region
   labels   = var.labels
 
-  deletion_protection = false
-
   template {
     labels          = var.labels
     service_account = var.service_account_email

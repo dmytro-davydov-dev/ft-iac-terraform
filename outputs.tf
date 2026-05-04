@@ -24,6 +24,17 @@ output "secret_ids" {
   sensitive   = true
 }
 
+# OBS Phase 1 outputs
+output "otel_collector_url" {
+  description = "HTTPS URL of the ft-otel-collector Cloud Run service."
+  value       = module.otel_collector.service_url
+}
+
+output "otel_collector_grpc_endpoint" {
+  description = "gRPC OTLP endpoint for instrumented services (host only; Cloud Run adds TLS on port 443)."
+  value       = module.otel_collector.grpc_otlp_endpoint
+}
+
 # Phase 4 outputs
 output "bq_dataset_id" {
   description = "BigQuery dataset ID for this workspace."
