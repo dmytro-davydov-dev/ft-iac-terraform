@@ -230,6 +230,18 @@ module "cloud_run" {
 # Phase 5: Drone processing pipeline
 # ---------------------------------------------------------------------------
 
+# Drone GCS bucket + IAM for pre-signed upload URLs
+module "drone_storage" {
+  source = "./modules/drone_storage"
+
+  project_id      = local.project_id
+  env             = terraform.workspace
+  ft_api_sa_email = local.ft_api_sa_email
+  labels          = local.common_labels
+
+  depends_on = [google_service_account.ft_api]
+}
+
 # NodeODM Spot VM — GPU-accelerated drone image processing
 module "nodeodm_vm" {
   source = "./modules/nodeodm_vm"
