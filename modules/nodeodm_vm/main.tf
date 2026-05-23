@@ -141,6 +141,11 @@ resource "google_compute_instance" "nodeodm" {
     })
   }
 
+  # desired_status = "TERMINATED" ensures the VM is stopped by default after
+  # provisioning.  vm_manager.py starts/stops it on demand to keep GPU costs
+  # at $0/hr when no captures are processing.
+  desired_status = "TERMINATED"
+
   depends_on = [
     google_project_service.compute,
     google_project_iam_member.nodeodm_secret_accessor,
