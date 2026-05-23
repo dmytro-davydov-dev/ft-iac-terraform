@@ -35,6 +35,7 @@ locals {
   ingest_fn_sa_email      = "flowterra-ingest-fn@${local.project_id}.iam.gserviceaccount.com"
   ft_api_sa_email         = "flowterra-ft-api@${local.project_id}.iam.gserviceaccount.com"
   otel_collector_sa_email = "flowterra-otel-collector@${local.project_id}.iam.gserviceaccount.com"
+  nodeodm_vm_sa_email     = "flowterra-nodeodm-vm@${local.project_id}.iam.gserviceaccount.com"
 
   # ft-otel-collector: scale to zero in dev/demo, keep 1 warm in prod.
   otel_collector_min_instances = terraform.workspace == "prod" ? 1 : 0
@@ -96,6 +97,12 @@ module "secrets" {
     }
     "flowterra-grafana-otlp-endpoint" = {
       description           = "Grafana Cloud OTLP endpoint host:port (ft-otel-collector)."
+      automatic_replication = true
+    }
+    # Phase 5 — NodeODM VM token.
+    #   gcloud secrets versions add flowterra-nodeodm-token --data-file=<(echo -n "$TOKEN")
+    "flowterra-nodeodm-token" = {
+      description           = "Auth token for the NodeODM Spot VM (flowterra-nodeodm-vm)."
       automatic_replication = true
     }
   }
@@ -217,6 +224,23 @@ module "cloud_run" {
   allow_unauthenticated = terraform.workspace == "dev"
 
   depends_on = [google_service_account.ft_api]
+}
+
+# ---------------------------------------------------------------------------
+# Phase 5: Drone processing pipeline
+# ---------------------------------------------------------------------------
+
+# NodeODM Spot VM — GPU-accelerated drone image processing
+module "nodeodm_vm" {
+  source = "./modules/nodeodm_vm"
+
+  project_id              = local.project_id
+  region                  = var.region
+  cloud_run_sa_email      = local.ft_api_sa_email
+  nodeodm_token_secret_id = "flowterra-nodeodm-token"
+  labels                  = local.common_labels
+
+  depends_on = [module.secrets]
 }
 
 # EMQX MQTT broker — Managed Instance Group, size=1
