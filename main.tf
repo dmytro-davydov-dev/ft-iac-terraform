@@ -105,6 +105,17 @@ module "secrets" {
       description           = "Auth token for the NodeODM Spot VM (flowterra-nodeodm-vm)."
       automatic_replication = true
     }
+    # Phase 5 — Supabase credentials (used by ft-api and potree-converter).
+    #   gcloud secrets versions add flowterra-supabase-url --data-file=<(echo -n "$URL")
+    #   gcloud secrets versions add flowterra-supabase-service-key --data-file=<(echo -n "$KEY")
+    "flowterra-supabase-url" = {
+      description           = "Supabase project URL for ft-api and potree-converter."
+      automatic_replication = true
+    }
+    "flowterra-supabase-service-key" = {
+      description           = "Supabase service role key for server-side operations."
+      automatic_replication = true
+    }
   }
 }
 
@@ -240,6 +251,20 @@ module "drone_storage" {
   labels          = local.common_labels
 
   depends_on = [google_service_account.ft_api]
+}
+
+# PotreeConverter Cloud Run Job — LAS → Potree tiles → GCS
+module "potree_job" {
+  source = "./modules/potree_job"
+
+  project_id        = local.project_id
+  region            = var.region
+  image             = "europe-west1-docker.pkg.dev/${local.project_id}/drone/potree-converter:latest"
+  drone_bucket_name = module.drone_storage.bucket_name
+  ft_api_sa_email   = local.ft_api_sa_email
+  labels            = local.common_labels
+
+  depends_on = [module.drone_storage, module.secrets, google_service_account.ft_api]
 }
 
 # NodeODM Spot VM — GPU-accelerated drone image processing
